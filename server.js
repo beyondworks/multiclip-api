@@ -1,11 +1,7 @@
-// server.js — MultiClip API (ESM)
-
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -14,44 +10,55 @@ dotenv.config();
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-/* ---------- CORS: * 또는 화이트리스트 ---------- */
+/* ===================== CORS 설정 ===================== */
+/* Render의 환경변수 화면에서 CORS_ORIGIN 값을 * 로 주면 전체 허용 */
 const rawOrigins = (process.env.CORS_ORIGIN || '*').trim();
-const allowAll = rawOrigins === '' || rawOrigins === '*';
-const originList = allowAll ? [] : rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+/* '*' 이거나 빈값이면 전체 허용 모드 */
+const allowAll = rawOrigins === '*' || rawOrigins === '';
+/* 화이트리스트 리스트 (전체 허용이 아닌 경우에만 사용) */
+const originList = allowAll
+  ? []
+  : rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
 
+/* CORS 미들웨어 */
 app.use(
   cors({
     origin: (origin, cb) => {
+      // 서버 자체 호출(같은 오리진)이나 Postman 등 Origin 없는 요청 허용
+      if (!origin) return cb(null, true);
+
+      // 전체 허용 모드
       if (allowAll) return cb(null, true);
-      if (!origin) return cb(null, true);                 // same-origin / server-to-server
+
+      // 화이트리스트 모드
       if (originList.includes(origin)) return cb(null, true);
+
+      console.warn(`[CORS] blocked origin: ${origin}`);
       return cb(new Error('CORS blocked'));
     },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    optionsSuccessStatus: 204,
     credentials: false,
   })
 );
+
+// 프리플라이트(OPTIONS)도 통과
 app.options('*', cors());
 
-/* ---------- 정적 파일 서빙: public/ ---------- */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// 예: https://<host>/multiclip-test.html 로 접근
-app.use(express.static(path.join(__dirname, 'public')));
+/* ===================== 정적 파일 ===================== */
+/* public/multiclip-test.html => https://<host>/multiclip-test.html */
+app.use(express.static('public'));
 
-/* ---------- AWS S3 ---------- */
+/* ===================== S3 설정 ===================== */
 const region = process.env.AWS_REGION || 'us-east-1';
 const bucket = process.env.S3_BUCKET;
 const urlTtlSec = Number(process.env.SIGNED_URL_TTL_SEC || 300);
+
 const s3 = new S3Client({ region });
 
-/* ---------- 인메모리 잡 저장소 ---------- */
+/* ===================== 인메모리 잡 ===================== */
 const jobs = new Map();
-const nid = (p = 'job') => `${p}_${crypto.randomBytes(8).toString('hex')}`;
+const nid = (p='job') => `${p}_${crypto.randomBytes(8).toString('hex')}`;
 
-/* ---------- 라우트 ---------- */
+/* ===================== 라우트 ===================== */
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.post('/api/parse', (req, res) => {
@@ -74,11 +81,9 @@ app.post('/api/download', (req, res) => {
   }
   const jobId = nid('job');
   jobs.set(jobId, { status: 'queued', progress: 0, platform, resourceId, quality, type });
-
   simulateWorker(jobId).catch(err => {
     jobs.set(jobId, { status: 'error', progress: 0, error: String(err?.message || err) });
   });
-
   res.json({ jobId, estimatedSec: 10 });
 });
 
@@ -89,7 +94,7 @@ app.get('/api/download/status', (req, res) => {
   res.json({ jobId, ...job });
 });
 
-/* ---------- 작업 시뮬레이터 (S3 업로드 후 서명 URL 발급) ---------- */
+/* ===================== 작업 시뮬레이터 ===================== */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function simulateWorker(jobId) {
@@ -111,8 +116,9 @@ async function simulateWorker(jobId) {
   }
 }
 
-/* ---------- 서버 시작 ---------- */
+/* ===================== 서버 시작 ===================== */
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Server listening on ${port}`);
+  console.log(`[CORS] CORS_ORIGIN="${rawOrigins}" allowAll=${allowAll} list=[${originList.join(', ')}]`);
 });
