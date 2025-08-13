@@ -1,245 +1,111 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MultiClip – API Quick Tester</title>
+  <link rel="icon" href="/favicon.ico" />
   <style>
-    :root {
-      --bg: #0f172a;        /* slate-900 */
-      --panel: #111827;     /* gray-900 */
-      --panel-2: #1f2937;   /* gray-800 */
-      --text: #e5e7eb;      /* gray-200 */
-      --muted: #94a3b8;     /* slate-400 */
-      --primary: #f97316;   /* orange-500 */
-      --success: #22c55e;   /* green-500 */
-      --input: #0b1220;     /* deep bg */
-      --border: #334155;    /* slate-700 */
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: radial-gradient(1200px 800px at 70% -10%, rgba(249,115,22,0.06), transparent 60%), var(--bg);
-      color: var(--text);
-      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Helvetica, Arial, Apple SD Gothic Neo, sans-serif;
-    }
-    .wrap {
-      max-width: 920px;
-      margin: 64px auto;
-      padding: 0 20px;
-    }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: 0 25px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
-    }
-    h1 {
-      margin: 0 0 18px;
-      font-size: 20px;
-      letter-spacing: .2px;
-    }
-    .row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
-    input[type="text"], select {
-      background: var(--input);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      outline: none;
-      width: 100%;
-    }
-    textarea {
-      background: var(--input);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      resize: vertical;
-      min-height: 88px;
-      width: 100%;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 13px;
-    }
-    label { display: block; color: var(--muted); margin: 14px 0 8px; font-size: 12px; }
-    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .log {
-      background: var(--panel-2);
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      min-height: 80px;
-      color: var(--muted);
-      white-space: pre-wrap;
-      font-family: ui-monospace, Menlo, Consolas, monospace;
-      font-size: 13px;
-    }
-    .btn {
-      border: 1px solid color-mix(in srgb, var(--primary) 50%, var(--border));
-      background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #000), color-mix(in srgb, var(--primary) 8%, #000));
-      color: white;
-      border-radius: 12px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: transform .02s ease, filter .15s ease;
-    }
-    .btn:active { transform: translateY(1px) }
-    .btn.secondary {
-      border-color: var(--border);
-      background: linear-gradient(180deg, #0b1220, #0a101b);
-      color: var(--text);
-    }
-    .tip { color: var(--muted); font-size: 12px; margin-top: 10px; }
-    .footer {
-      margin-top: 16px;
-      border-top: 1px dashed var(--border);
-      padding-top: 12px;
-      display: flex; align-items: center; gap: 8px;
-      color: var(--muted); font-size: 12px;
-    }
-    .pill { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: #0b1220; }
+    :root { --bg:#0f172a; --panel:#111827; --muted:#9ca3af; --text:#e5e7eb; --brand:#f97316; --input:#0b1220; }
+    html,body{margin:0;height:100%;background:linear-gradient(180deg,#0b1220,#0f172a);}
+    *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Apple SD Gothic Neo",sans-serif;}
+    .wrap{max-width:880px;margin:64px auto;padding:0 16px;}
+    .card{background:rgba(17,24,39,.7);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:24px;backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.25);}
+    h1{color:var(--text);font-weight:800;margin:0 0 18px 0;font-size:20px}
+    .row{display:flex;gap:8px;align-items:center}
+    .row>input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:#0b1220;color:var(--text);outline:none}
+    select,button{height:42px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:#0b1220;color:var(--text);padding:0 12px}
+    .btn{background:var(--brand);color:#111827;font-weight:700;border:none;cursor:pointer;padding:0 18px}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+    textarea{width:100%;height:120px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0b1220;color:var(--text);padding:12px;resize:vertical}
+    .log{height:120px;white-space:pre-wrap;overflow:auto;background:#0b1220;color:var(--muted);border-radius:12px;border:1px solid rgba(255,255,255,.08);padding:12px}
+    .footer{color:#7e8696;font-size:12px;margin-top:8px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>MultiClip – <span class="pill">API Quick Tester</span></h1>
-
-      <div class="row" style="margin-bottom:10px">
-        <input id="inpUrl" type="text" placeholder="다운로드할 링크 붙여넣기 (YouTube/Shorts/TikTok/Instagram 등)" />
-        <select id="selQuality" title="quality">
-          <option value="720p">720p</option>
-          <option value="1080p">1080p</option>
-          <option value="4k">4K</option>
+      <h1>MultiClip – <span style="opacity:.85">API Quick Tester</span></h1>
+      <div class="row">
+        <input id="url" placeholder="다운로드할 링크 붙여넣기 (YouTube/Shorts 등)" />
+        <select id="quality">
+          <option>720p</option><option selected>1080p</option><option>4K</option>
         </select>
-        <button id="btnParse" class="btn secondary">분석</button>
-        <button id="btnDownload" class="btn">다운로드</button>
+        <button id="btn-parse">분석</button>
       </div>
+      <button id="btn-download" class="btn" style="width:100%;margin-top:10px">다운로드</button>
 
       <div class="cols">
-        <div>
-          <label>1) Parse 결과</label>
-          <textarea id="taParse" readonly></textarea>
-        </div>
-        <div>
-          <label>2) Job 상태</label>
-          <textarea id="taStatus" readonly></textarea>
-        </div>
+        <textarea id="out-parse" readonly placeholder="1) Parse 결과"></textarea>
+        <textarea id="out-job" readonly placeholder="2) Job 상태"></textarea>
       </div>
-
-      <label style="margin-top:14px">로그</label>
       <div id="log" class="log">–</div>
-
-      <div class="footer">
-        <span>Tip:</span>
-        <span>무료 인스턴스는 첫 요청 시 웜업으로 수십 초 지연될 수 있어요.</span>
-      </div>
+      <div class="footer">Tip: 무료 인스턴스는 첫 요청 시 웜업으로 수십 초 지연될 수 있습니다.</div>
     </div>
   </div>
 
-  <script>
-    // 헬퍼
-    const $ = (sel) => document.querySelector(sel);
-    const log = (msg) => {
-      const el = $("#log");
-      el.textContent = (el.textContent === "–" ? "" : el.textContent + "\n") +
-        `[${new Date().toTimeString().slice(0,8)}] ${msg}`;
-      el.scrollTop = el.scrollHeight;
-    };
-    const setJSON = (el, obj) => el.value = JSON.stringify(obj, null, 2);
+<script>
+const $ = sel => document.querySelector(sel);
+const log = (s)=>{ const el=$("#log"); el.textContent = (el.textContent==="–"?"":el.textContent+"\n")+`[${new Date().toTimeString().slice(0,8)}] ${s}`; el.scrollTop=el.scrollHeight; };
+const api = p => p; // 같은 오리진에 배포되어 있으므로 상대경로 그대로
 
-    // API 호출: 같은 오리진 → 상대경로 사용
-    async function api(path, init) {
-      const res = await fetch(path, {
-        method: init?.method || "POST",
-        headers: { "Content-Type": "application/json" },
-        body: init?.body ? JSON.stringify(init.body) : undefined
-      });
-      if (!res.ok) throw new Error(`${path} ${res.status}`);
-      return res.json();
-    }
+let latest = { platform:null, resourceId:null, jobId:null, downloadUrl:null };
 
-    // 상태 폴링
-    async function pollStatus(jobId) {
-      const box = $("#taStatus");
-      while (true) {
-        const q = new URLSearchParams({ jobId });
-        const res = await fetch("/api/download/status?" + q.toString());
-        if (!res.ok) throw new Error("status " + res.status);
-        const data = await res.json();
-        setJSON(box, { jobId, ...data });
-        if (data.status === "done") {
-          log("완료! 다운로드 링크 열기…");
-          if (data.downloadUrl) {
-            window.open(data.downloadUrl, "_blank");
-          }
-          break;
-        }
-        if (data.status === "error") {
-          log("오류: " + (data.error || "unknown"));
-          break;
-        }
-        await new Promise(r => setTimeout(r, 1200));
-      }
-    }
+$("#btn-parse").onclick = async ()=>{
+  const url = $("#url").value.trim();
+  if(!url){ alert("URL을 입력하세요"); return; }
+  log("parse 요청 중…");
+  try{
+    const r = await fetch(api("/api/parse"), { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ url }) });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j?.error||j?.message||r.statusText);
+    latest.platform = j.platform; latest.resourceId = j.resourceId;
+    $("#out-parse").value = JSON.stringify(j, null, 2);
+    log("parse 완료.");
+  }catch(e){ log("parse 오류: "+e.message); alert("Parse 실패: "+e.message); }
+};
 
-    // 이벤트
-    document.addEventListener("DOMContentLoaded", () => {
-      const urlEl = $("#inpUrl");
-      const taParse = $("#taParse");
-      const taStatus = $("#taStatus");
-
-      $("#btnParse").addEventListener("click", async () => {
-        try {
-          const url = urlEl.value.trim();
-          if (!url) return alert("URL을 입력하세요.");
-          log("parse 요청 중…");
-          const data = await api("/api/parse", { body: { url } });
-          setJSON(taParse, data);
-          log("parse 완료.");
-        } catch (e) {
-          alert("Parse 실패: " + e.message);
-          log("parse 에러: " + e.message);
-        }
-      });
-
-      $("#btnDownload").addEventListener("click", async () => {
-        try {
-          const url = urlEl.value.trim();
-          if (!url) return alert("URL을 입력하세요.");
-          // parse 결과가 없으면 간단 parse 먼저
-          let parsed;
-          try {
-            parsed = JSON.parse(taParse.value || "{}");
-          } catch {}
-          if (!parsed.platform || !parsed.resourceId) {
-            parsed = await api("/api/parse", { body: { url } });
-            setJSON(taParse, parsed);
-          }
-
-          const quality = $("#selQuality").value;
-          log("download 요청 중…");
-          const res = await api("/api/download", {
-            body: {
-              url,                               // 서버가 url 우선 사용
-              platform: parsed.platform,
-              resourceId: parsed.resourceId,
-              quality,
-              type: "video"                      // mp4로 받기 (서버에서 처리)
-            }
-          });
-          log(`download enqueued: ${res.jobId}`);
-          taStatus.value = "";
-          await pollStatus(res.jobId);
-        } catch (e) {
-          alert("다운로드 실패: " + e.message);
-          log("다운로드 에러: " + e.message);
-        }
-      });
+$("#btn-download").onclick = async ()=>{
+  if(!latest.platform){ alert("먼저 [분석]을 눌러 주세요."); return; }
+  const quality = $("#quality").value;
+  log("download 요청 중…");
+  try{
+    // 1) 잡 생성
+    const r1 = await fetch(api("/api/download"), { method:"POST", headers:{ "content-type":"application/json" },
+      body: JSON.stringify({ platform: latest.platform, resourceId: latest.resourceId, url: $("#url").value.trim(), quality, type:"video" })
     });
-  </script>
+    const j1 = await r1.json();
+    if(!r1.ok) throw new Error(j1?.error||j1?.message||r1.statusText);
+    latest.jobId = j1.jobId;
+    log(`download enqueued: ${j1.jobId}`);
+
+    // 2) 폴링
+    let done=false, tries=0;
+    while(!done && tries<60){
+      await new Promise(r=>setTimeout(r, 1000));
+      const r2 = await fetch(api(`/api/download/status?jobId=${encodeURIComponent(latest.jobId)}`));
+      const j2 = await r2.json();
+      $("#out-job").value = JSON.stringify(j2, null, 2);
+      if(j2.status==="done" && j2.downloadUrl){
+        latest.downloadUrl = j2.downloadUrl;
+        done = true;
+      }else if(j2.status==="error"){
+        throw new Error(j2.error||"unknown");
+      }
+      tries++;
+    }
+
+    if(!latest.downloadUrl) throw new Error("timeout");
+
+    // 3) **프록시 없이 직접 다운로드** (CORS 비의존)
+    log("완료! 다운로드 링크 열기…");
+    window.open(latest.downloadUrl, "_blank");   // 새 탭으로 열기 (또는 location.href = …)
+  }catch(e){
+    log("오류: "+e.message);
+    alert("작업 오류: "+e.message);
+  }
+};
+</script>
 </body>
 </html>
