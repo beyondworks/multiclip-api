@@ -4,7 +4,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import fs from 'fs-extra';
 import tmp from 'tmp';
-import ytdlp from 'yt-dlp-exec';
+import ytdlp from 'youtube-dl-exec'; // ← 교체
 import ffmpegPath from 'ffmpeg-static';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -106,7 +106,7 @@ app.get('/api/history', (_req, res) => {
 // 파비콘 404 제거
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
-/* ---------- 워커: yt-dlp → mp4/m4a → S3 업로드 ---------- */
+/* ---------- 워커: youtube-dl-exec(yt-dlp) → mp4/m4a → S3 ---------- */
 async function runWorker(jobId) {
   if (!bucket) throw new Error('S3_BUCKET 환경 변수가 설정되지 않았습니다.');
   const job = jobs.get(jobId);
@@ -134,9 +134,9 @@ async function runWorker(jobId) {
 
     jobs.set(jobId, { ...jobs.get(jobId), progress: 15 });
 
-    // yt-dlp 실행 (ffmpeg-static 경로 지정)
     await ytdlp(url, {
-      output: tmpFile,
+      ytDlp: true,                      // ← yt-dlp 강제 사용
+      output: tmpFile,                  // 임시 파일에 바로 저장
       format: fmt,
       mergeOutputFormat: isAudioOnly ? 'm4a' : 'mp4',
       ffmpegLocation: ffmpegPath || undefined,
@@ -173,7 +173,7 @@ async function runWorker(jobId) {
 
     await uploader.done();
 
-    const signed = await getSignedUrl(
+    const downloadUrl = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: bucket, Key: key }),
       { expiresIn: urlTtlSec }
@@ -183,7 +183,7 @@ async function runWorker(jobId) {
       ...jobs.get(jobId),
       status: 'done',
       progress: 100,
-      downloadUrl: signed,
+      downloadUrl,
       fileKey: key,
       fileSize
     };
