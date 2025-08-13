@@ -1,64 +1,245 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MultiClip – API Quick Tester</title>
   <style>
-    :root { --bg:#0b1220; --panel:#141b2d; --muted:#7f8a9a; --fg:#e8eef7; --accent:#ff7a1a; --ok:#17c964; --err:#f31260; }
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
-    .wrap{max-width:980px;margin:60px auto;padding:0 16px}
-    .card{background:var(--panel);border-radius:16px;padding:22px 22px 18px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
-    h1{font-size:22px;margin:0 0 14px;font-weight:700}
-    .row{display:flex;gap:10px;align-items:center}
-    input[type=text]{flex:1;background:#0e1422;border:1px solid #1f2a44;color:var(--fg);border-radius:10px;height:44px;padding:0 12px;font-size:14px}
-    select{background:#0e1422;border:1px solid #1f2a44;color:var(--fg);border-radius:10px;height:44px;padding:0 10px}
-    button{height:44px;border:none;border-radius:10px;padding:0 16px;cursor:pointer;font-weight:700}
-    .btn{background:#1f2a44;color:#d6def0}
-    .btn:hover{filter:brightness(1.08)}
-    .btn-prim{background:var(--accent);color:#000}
-    .btn-ghost{background:transparent;border:1px solid #273352}
-    .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-    textarea{width:100%;min-height:120px;background:#0e1422;border:1px solid #1f2a44;color:#dbe5f7;border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
-    .log{min-height:120px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0e1422;border:1px solid #1f2a44;border-radius:10px;padding:10px;color:#b9c6dc}
-    .muted{color:var(--muted);font-size:12px;margin-top:10px}
-    .hist{margin-top:16px}
-    table{width:100%;border-collapse:collapse;background:#0e1422;border:1px solid #1f2a44;border-radius:10px;overflow:hidden}
-    th,td{font-size:13px;padding:10px 12px;border-bottom:1px solid #1f2a44}
-    th{text-align:left;color:#9fb2d4;background:#0f1728}
-    tr:last-child td{border-bottom:none}
-    a{color:#7cc3ff;text-decoration:none}
-    a:hover{text-decoration:underline}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
-    .ok{background:#082d22;color:#8cf0c0}
-    .err{background:#2d0a12;color:#f7a3b7}
+    :root {
+      --bg: #0f172a;        /* slate-900 */
+      --panel: #111827;     /* gray-900 */
+      --panel-2: #1f2937;   /* gray-800 */
+      --text: #e5e7eb;      /* gray-200 */
+      --muted: #94a3b8;     /* slate-400 */
+      --primary: #f97316;   /* orange-500 */
+      --success: #22c55e;   /* green-500 */
+      --input: #0b1220;     /* deep bg */
+      --border: #334155;    /* slate-700 */
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 70% -10%, rgba(249,115,22,0.06), transparent 60%), var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Helvetica, Arial, Apple SD Gothic Neo, sans-serif;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 64px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 25px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    h1 {
+      margin: 0 0 18px;
+      font-size: 20px;
+      letter-spacing: .2px;
+    }
+    .row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
+    input[type="text"], select {
+      background: var(--input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      outline: none;
+      width: 100%;
+    }
+    textarea {
+      background: var(--input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      resize: vertical;
+      min-height: 88px;
+      width: 100%;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+    label { display: block; color: var(--muted); margin: 14px 0 8px; font-size: 12px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .log {
+      background: var(--panel-2);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 80px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+    .btn {
+      border: 1px solid color-mix(in srgb, var(--primary) 50%, var(--border));
+      background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #000), color-mix(in srgb, var(--primary) 8%, #000));
+      color: white;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform .02s ease, filter .15s ease;
+    }
+    .btn:active { transform: translateY(1px) }
+    .btn.secondary {
+      border-color: var(--border);
+      background: linear-gradient(180deg, #0b1220, #0a101b);
+      color: var(--text);
+    }
+    .tip { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .footer {
+      margin-top: 16px;
+      border-top: 1px dashed var(--border);
+      padding-top: 12px;
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted); font-size: 12px;
+    }
+    .pill { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: #0b1220; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>MultiClip – API Quick Tester <span style="color:#9fb2d4;font-weight:600">beta</span></h1>
+      <h1>MultiClip – <span class="pill">API Quick Tester</span></h1>
+
       <div class="row" style="margin-bottom:10px">
-        <input id="url" type="text" placeholder="다운로드할 링크 붙여넣기 (YouTube)" />
-        <select id="quality">
-          <option value="720p" selected>720p</option>
+        <input id="inpUrl" type="text" placeholder="다운로드할 링크 붙여넣기 (YouTube/Shorts/TikTok/Instagram 등)" />
+        <select id="selQuality" title="quality">
+          <option value="720p">720p</option>
           <option value="1080p">1080p</option>
-          <option value="480p">480p</option>
-          <option value="360p">360p</option>
-          <option value="best">Best</option>
+          <option value="4k">4K</option>
         </select>
-        <button id="btnParse" class="btn">분석</button>
-        <button id="btnDownload" class="btn btn-prim">다운로드</button>
+        <button id="btnParse" class="btn secondary">분석</button>
+        <button id="btnDownload" class="btn">다운로드</button>
       </div>
 
       <div class="cols">
-        <textarea id="parseOut" readonly placeholder="1) Parse 결과"></textarea>
-        <textarea id="statusOut" readonly placeholder="2) Job 상태"></textarea>
+        <div>
+          <label>1) Parse 결과</label>
+          <textarea id="taParse" readonly></textarea>
+        </div>
+        <div>
+          <label>2) Job 상태</label>
+          <textarea id="taStatus" readonly></textarea>
+        </div>
       </div>
 
-      <div id="log" class="log" style="margin-top:10px">–</div>
-      <div class="muted">Tip: 무료 인스턴스는 첫 요청 시 웜업으로 수십 초 지연될 수 있습니다.</div>
-    </div>
+      <label style="margin-top:14px">로그</label>
+      <div id="log" class="log">–</div>
 
-    <div class="card hist">
-      <div class="row" style="justify-content:space-betwe
+      <div class="footer">
+        <span>Tip:</span>
+        <span>무료 인스턴스는 첫 요청 시 웜업으로 수십 초 지연될 수 있어요.</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 헬퍼
+    const $ = (sel) => document.querySelector(sel);
+    const log = (msg) => {
+      const el = $("#log");
+      el.textContent = (el.textContent === "–" ? "" : el.textContent + "\n") +
+        `[${new Date().toTimeString().slice(0,8)}] ${msg}`;
+      el.scrollTop = el.scrollHeight;
+    };
+    const setJSON = (el, obj) => el.value = JSON.stringify(obj, null, 2);
+
+    // API 호출: 같은 오리진 → 상대경로 사용
+    async function api(path, init) {
+      const res = await fetch(path, {
+        method: init?.method || "POST",
+        headers: { "Content-Type": "application/json" },
+        body: init?.body ? JSON.stringify(init.body) : undefined
+      });
+      if (!res.ok) throw new Error(`${path} ${res.status}`);
+      return res.json();
+    }
+
+    // 상태 폴링
+    async function pollStatus(jobId) {
+      const box = $("#taStatus");
+      while (true) {
+        const q = new URLSearchParams({ jobId });
+        const res = await fetch("/api/download/status?" + q.toString());
+        if (!res.ok) throw new Error("status " + res.status);
+        const data = await res.json();
+        setJSON(box, { jobId, ...data });
+        if (data.status === "done") {
+          log("완료! 다운로드 링크 열기…");
+          if (data.downloadUrl) {
+            window.open(data.downloadUrl, "_blank");
+          }
+          break;
+        }
+        if (data.status === "error") {
+          log("오류: " + (data.error || "unknown"));
+          break;
+        }
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    // 이벤트
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlEl = $("#inpUrl");
+      const taParse = $("#taParse");
+      const taStatus = $("#taStatus");
+
+      $("#btnParse").addEventListener("click", async () => {
+        try {
+          const url = urlEl.value.trim();
+          if (!url) return alert("URL을 입력하세요.");
+          log("parse 요청 중…");
+          const data = await api("/api/parse", { body: { url } });
+          setJSON(taParse, data);
+          log("parse 완료.");
+        } catch (e) {
+          alert("Parse 실패: " + e.message);
+          log("parse 에러: " + e.message);
+        }
+      });
+
+      $("#btnDownload").addEventListener("click", async () => {
+        try {
+          const url = urlEl.value.trim();
+          if (!url) return alert("URL을 입력하세요.");
+          // parse 결과가 없으면 간단 parse 먼저
+          let parsed;
+          try {
+            parsed = JSON.parse(taParse.value || "{}");
+          } catch {}
+          if (!parsed.platform || !parsed.resourceId) {
+            parsed = await api("/api/parse", { body: { url } });
+            setJSON(taParse, parsed);
+          }
+
+          const quality = $("#selQuality").value;
+          log("download 요청 중…");
+          const res = await api("/api/download", {
+            body: {
+              url,                               // 서버가 url 우선 사용
+              platform: parsed.platform,
+              resourceId: parsed.resourceId,
+              quality,
+              type: "video"                      // mp4로 받기 (서버에서 처리)
+            }
+          });
+          log(`download enqueued: ${res.jobId}`);
+          taStatus.value = "";
+          await pollStatus(res.jobId);
+        } catch (e) {
+          alert("다운로드 실패: " + e.message);
+          log("다운로드 에러: " + e.message);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
