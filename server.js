@@ -1,7 +1,11 @@
+// server.js — MultiClip API (ESM)
+
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -10,7 +14,7 @@ dotenv.config();
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-/* ---------- CORS: * 또는 화이트리스트 지원 ---------- */
+/* ---------- CORS: * 또는 화이트리스트 ---------- */
 const rawOrigins = (process.env.CORS_ORIGIN || '*').trim();
 const allowAll = rawOrigins === '' || rawOrigins === '*';
 const originList = allowAll ? [] : rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
@@ -18,20 +22,24 @@ const originList = allowAll ? [] : rawOrigins.split(',').map(s => s.trim()).filt
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (allowAll) return cb(null, true);          // 모두 허용
-      if (!origin) return cb(null, true);           // 같은 오리진/서버 호출
+      if (allowAll) return cb(null, true);
+      if (!origin) return cb(null, true);                 // same-origin / server-to-server
       if (originList.includes(origin)) return cb(null, true);
-      return cb(new Error('CORS blocked'));         // 화이트리스트 밖
+      return cb(new Error('CORS blocked'));
     },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
+    credentials: false,
   })
 );
-// 사전검사(OPTIONS) 처리
 app.options('*', cors());
 
 /* ---------- 정적 파일 서빙: public/ ---------- */
-/* public/multiclip-test.html 을 업로드하면
-   https://<host>/multiclip-test.html 로 접근 가능 (동일 오리진) */
-app.use(express.static('public'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// 예: https://<host>/multiclip-test.html 로 접근
+app.use(express.static(path.join(__dirname, 'public')));
 
 /* ---------- AWS S3 ---------- */
 const region = process.env.AWS_REGION || 'us-east-1';
@@ -41,7 +49,7 @@ const s3 = new S3Client({ region });
 
 /* ---------- 인메모리 잡 저장소 ---------- */
 const jobs = new Map();
-const nid = (p='job') => `${p}_${crypto.randomBytes(8).toString('hex')}`;
+const nid = (p = 'job') => `${p}_${crypto.randomBytes(8).toString('hex')}`;
 
 /* ---------- 라우트 ---------- */
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -66,9 +74,11 @@ app.post('/api/download', (req, res) => {
   }
   const jobId = nid('job');
   jobs.set(jobId, { status: 'queued', progress: 0, platform, resourceId, quality, type });
+
   simulateWorker(jobId).catch(err => {
     jobs.set(jobId, { status: 'error', progress: 0, error: String(err?.message || err) });
   });
+
   res.json({ jobId, estimatedSec: 10 });
 });
 
