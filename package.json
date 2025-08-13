@@ -15,6 +15,6 @@
     "ffmpeg-static": "^5.2.0",
     "fs-extra": "^11.2.0",
     "tmp": "^0.2.3",
-    "yt-dlp-exec": "^2.4.8"
+    "yt-dlp-exec": "^1.0.2"
   }
 }
