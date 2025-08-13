@@ -2,12 +2,11 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
-import path from 'path';
 import fs from 'fs-extra';
 import tmp from 'tmp';
 import ytdlp from 'yt-dlp-exec';
 import ffmpegPath from 'ffmpeg-static';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -16,39 +15,43 @@ dotenv.config();
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-/* ---------- CORS ---------- */
+// ----- CORS -----
 const rawOrigins = (process.env.CORS_ORIGIN || '*').trim();
 const allowAll = rawOrigins === '' || rawOrigins === '*';
 const originList = allowAll ? [] : rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
-
 app.use(cors({
   origin: (origin, cb) => {
     if (allowAll) return cb(null, true);
-    if (!origin) return cb(null, true);          // same-origin
+    if (!origin) return cb(null, true);
     if (originList.includes(origin)) return cb(null, true);
     return cb(new Error('CORS blocked'));
   },
 }));
 app.options('*', cors());
 
-/* ---------- 정적 ---------- */
+// ----- static -----
 app.use(express.static('public'));
 
-/* ---------- S3 ---------- */
+// ----- S3 -----
 const region = process.env.AWS_REGION || 'us-east-1';
 const bucket = process.env.S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET_NAME;
-const urlTtlSec = Number(process.env.SIGNED_URL_TTL_SEC || 900); // 권장 15분
+const urlTtlSec = Number(process.env.SIGNED_URL_TTL_SEC || 900);
 if (!bucket) console.warn('[WARN] S3 bucket env not set (S3_BUCKET)');
-
 const s3 = new S3Client({ region });
 
-/* ---------- 잡 저장소 ---------- */
+// ----- jobs & history -----
 const jobs = new Map();
+const history = [];
+const MAX_HISTORY = 50;
 const nid = (p='job') => `${p}_${crypto.randomBytes(8).toString('hex')}`;
+const pushHistory = (item) => {
+  history.unshift({ ...item, at: Date.now() });
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+};
 
+// ----- routes -----
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-/* URL 파싱(플랫폼 감지만) */
 app.post('/api/parse', (req, res) => {
   const { url } = req.body || {};
   if (!url || !/^https?:\/\//i.test(url)) {
@@ -58,77 +61,79 @@ app.post('/api/parse', (req, res) => {
   if (/tiktok\./i.test(url)) platform = 'tiktok';
   else if (/instagram\./i.test(url)) platform = 'instagram';
   else if (/facebook\.|fb\.watch/i.test(url)) platform = 'facebook';
-
-  const resourceId = nid('rs');
-  return res.json({ platform, resourceId });
+  res.json({ platform, resourceId: nid('rs') });
 });
 
-/* 다운로드 잡 생성 */
-app.post('/api/download', async (req, res) => {
+app.post('/api/download', (req, res) => {
   const { url, platform, resourceId, quality = '1080p', type = 'video' } = req.body || {};
   if (!url || !platform || !resourceId) {
     return res.status(400).json({ code: 'BAD_REQ', message: 'url, platform, resourceId가 필요합니다.' });
   }
   const jobId = nid('job');
-  jobs.set(jobId, { status: 'queued', progress: 0, platform, resourceId, quality, type, url });
+  const payload = { status: 'queued', progress: 0, platform, resourceId, quality, type, url };
+  jobs.set(jobId, payload);
   runWorker(jobId).catch(err => {
-    jobs.set(jobId, { status: 'error', progress: 0, error: String(err?.message || err) });
+    const e = String(err?.stderr || err?.message || err);
+    const failed = { ...payload, status: 'error', progress: 0, error: e };
+    jobs.set(jobId, failed);
+    pushHistory({ jobId, ...failed });
   });
   res.json({ jobId, estimatedSec: 20 });
 });
 
-/* 다운로드 상태 조회 */
 app.get('/api/download/status', (req, res) => {
   const { jobId } = req.query || {};
   const job = jobs.get(String(jobId));
   if (!job) return res.status(404).json({ code: 'NOT_FOUND', message: 'job not found' });
-  return res.json({ jobId, ...job });
+  res.json({ jobId, ...job });
 });
 
-/* ---------- 워커: yt-dlp로 mp4 받고 S3 업로드 ---------- */
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+app.get('/api/history', (_req, res) => res.json({ items: history }));
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
+// ----- worker: yt-dlp -> mp4/m4a -> S3 -----
 async function runWorker(jobId) {
   if (!bucket) throw new Error('S3_BUCKET 환경 변수가 설정되지 않았습니다.');
   const job = jobs.get(jobId);
   if (!job) return;
-  const { url, quality } = job;
 
+  const { url, quality, type = 'video' } = job;
   jobs.set(jobId, { ...job, status: 'processing', progress: 5 });
 
-  // 임시 파일 경로 생성
-  const tmpFile = tmp.tmpNameSync({ postfix: '.mp4' });
+  const isAudioOnly = String(type).toLowerCase() === 'audio';
+  const tmpFile = tmp.tmpNameSync({ postfix: isAudioOnly ? '.m4a' : '.mp4' });
 
   try {
-    // 품질 프리셋 → yt-dlp format 문자열
-    const fmt = quality === '4K'
-      ? 'bestvideo[height>=2160][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-      : quality === '1080p'
-      ? 'bestvideo[height>=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-      : 'bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+    let fmt;
+    if (isAudioOnly) {
+      fmt = 'bestaudio[ext=m4a]/bestaudio';
+    } else {
+      fmt =
+        quality === '4K'
+          ? 'bestvideo[height>=2160][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+          : quality === '1080p'
+          ? 'bestvideo[height>=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+          : 'bestvideo[height>=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+    }
 
-    // yt-dlp 실행 (ffmpeg-static 경로 지정)
-    jobs.set(jobId, { ...job, status: 'processing', progress: 20 });
+    jobs.set(jobId, { ...jobs.get(jobId), progress: 20 });
     await ytdlp(url, {
       output: tmpFile,
       format: fmt,
-      mergeOutputFormat: 'mp4',
+      mergeOutputFormat: isAudioOnly ? 'm4a' : 'mp4',
       ffmpegLocation: ffmpegPath || undefined,
-      // 안정 옵션
       retries: 3,
-      noCheckCertificates: true,
-      preferFreeFormats: false,
-      // quiet: true  // 필요 시 로그 억제
+      noCheckCertificates: true
     });
 
-    // 파일 존재/사이즈 확인
     const stat = await fs.stat(tmpFile);
     if (!stat || stat.size === 0) throw new Error('다운로드된 파일이 비어 있습니다.');
+    const fileSize = stat.size;
 
-    jobs.set(jobId, { ...job, status: 'processing', progress: 60 });
+    jobs.set(jobId, { ...jobs.get(jobId), progress: 60 });
 
-    // S3 업로드 (스트리밍)
-    const key = `downloads/${jobId}.mp4`;
+    const ext = isAudioOnly ? 'm4a' : 'mp4';
+    const key = `downloads/${jobId}.${ext}`;
     const body = fs.createReadStream(tmpFile);
 
     const uploader = new Upload({
@@ -137,36 +142,35 @@ async function runWorker(jobId) {
         Bucket: bucket,
         Key: key,
         Body: body,
-        ContentType: 'video/mp4',
-        // 원하면 공개 링크로: ACL: 'public-read'
+        ContentType: isAudioOnly ? 'audio/mp4' : 'video/mp4'
       },
       queueSize: 3,
       partSize: 8 * 1024 * 1024
     });
 
     uploader.on('httpUploadProgress', (p) => {
-      const ratio = p.total ? Math.round((p.loaded / p.total) * 30) : 0; // 업로드 구간 60→90 사이
+      const ratio = p.total ? Math.round((p.loaded / p.total) * 30) : 0;
       jobs.set(jobId, { ...jobs.get(jobId), progress: 60 + Math.min(30, ratio) });
     });
 
     await uploader.done();
 
-    jobs.set(jobId, { ...jobs.get(jobId), progress: 95 });
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: urlTtlSec });
 
-    // 서명 URL 발급
-    const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
-    const downloadUrl = await getSignedUrl(s3, cmd, { expiresIn: urlTtlSec });
-
-    jobs.set(jobId, { ...jobs.get(jobId), status: 'done', progress: 100, downloadUrl });
+    const result = { ...jobs.get(jobId), status: 'done', progress: 100, downloadUrl: signed, fileKey: key, fileSize };
+    jobs.set(jobId, result);
+    pushHistory({ jobId, ...result });
   } catch (err) {
-    jobs.set(jobId, { ...jobs.get(jobId), status: 'error', progress: 0, error: String(err?.stderr || err?.message || err) });
+    const e = String(err?.stderr || err?.message || err);
+    const failed = { ...jobs.get(jobId), status: 'error', progress: 0, error: e };
+    jobs.set(jobId, failed);
+    pushHistory({ jobId, ...failed });
   } finally {
-    // 임시 파일 정리
     try { await fs.remove(tmpFile); } catch {}
   }
 }
 
-/* ---------- 서버 시작 ---------- */
+// ----- start -----
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log(`Server listening on ${port}`);
