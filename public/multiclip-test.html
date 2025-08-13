@@ -2,135 +2,63 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MultiClip – API Quick Tester</title>
   <style>
-    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --txt:#e5e7eb; --pri:#f97316; }
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
-    .wrap{max-width:920px;margin:48px auto;padding:0 16px;}
-    .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
-    h1{font-size:22px;margin:0 0 16px;}
-    .row{display:flex;gap:12px;align-items:center}
-    input[type=text]{flex:1;padding:12px 14px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:var(--txt);font-size:14px;outline:none}
-    button{padding:10px 14px;border-radius:12px;border:0;background:var(--pri);color:#111827;font-weight:700;cursor:pointer}
-    button.secondary{background:#1f2937;color:#d1d5db}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-    .box{background:#0b1220;border:1px solid #1f2937;border-radius:12px;min-height:84px;padding:12px;font-size:13px}
-    .log{white-space:pre-wrap;line-height:1.45;color:var(--muted);height:120px;overflow:auto}
-    .tip{margin-top:10px;color:#9ca3af;font-size:12px}
-    a{color:#93c5fd;text-decoration:none}
+    :root { --bg:#0b1220; --panel:#141b2d; --muted:#7f8a9a; --fg:#e8eef7; --accent:#ff7a1a; --ok:#17c964; --err:#f31260; }
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+    .wrap{max-width:980px;margin:60px auto;padding:0 16px}
+    .card{background:var(--panel);border-radius:16px;padding:22px 22px 18px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+    h1{font-size:22px;margin:0 0 14px;font-weight:700}
+    .row{display:flex;gap:10px;align-items:center}
+    input[type=text]{flex:1;background:#0e1422;border:1px solid #1f2a44;color:var(--fg);border-radius:10px;height:44px;padding:0 12px;font-size:14px}
+    select{background:#0e1422;border:1px solid #1f2a44;color:var(--fg);border-radius:10px;height:44px;padding:0 10px}
+    button{height:44px;border:none;border-radius:10px;padding:0 16px;cursor:pointer;font-weight:700}
+    .btn{background:#1f2a44;color:#d6def0}
+    .btn:hover{filter:brightness(1.08)}
+    .btn-prim{background:var(--accent);color:#000}
+    .btn-ghost{background:transparent;border:1px solid #273352}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    textarea{width:100%;min-height:120px;background:#0e1422;border:1px solid #1f2a44;color:#dbe5f7;border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
+    .log{min-height:120px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0e1422;border:1px solid #1f2a44;border-radius:10px;padding:10px;color:#b9c6dc}
+    .muted{color:var(--muted);font-size:12px;margin-top:10px}
+    .hist{margin-top:16px}
+    table{width:100%;border-collapse:collapse;background:#0e1422;border:1px solid #1f2a44;border-radius:10px;overflow:hidden}
+    th,td{font-size:13px;padding:10px 12px;border-bottom:1px solid #1f2a44}
+    th{text-align:left;color:#9fb2d4;background:#0f1728}
+    tr:last-child td{border-bottom:none}
+    a{color:#7cc3ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+    .ok{background:#082d22;color:#8cf0c0}
+    .err{background:#2d0a12;color:#f7a3b7}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>MultiClip – API Quick Tester <small style="color:#9ca3af">beta</small></h1>
-
-      <div class="row">
-        <input id="url" type="text" placeholder="다운로드할 링크 붙여넣기 (YouTube/Shorts/TikTok/Instagram 등)" />
-        <button id="btnParse">분석</button>
-        <button id="btnDownload" class="secondary" disabled>다운로드</button>
+      <h1>MultiClip – API Quick Tester <span style="color:#9fb2d4;font-weight:600">beta</span></h1>
+      <div class="row" style="margin-bottom:10px">
+        <input id="url" type="text" placeholder="다운로드할 링크 붙여넣기 (YouTube)" />
+        <select id="quality">
+          <option value="720p" selected>720p</option>
+          <option value="1080p">1080p</option>
+          <option value="480p">480p</option>
+          <option value="360p">360p</option>
+          <option value="best">Best</option>
+        </select>
+        <button id="btnParse" class="btn">분석</button>
+        <button id="btnDownload" class="btn btn-prim">다운로드</button>
       </div>
 
-      <div class="grid">
-        <div class="box">
-          <div style="opacity:.7;margin-bottom:6px">1) Parse 결과</div>
-          <div id="parseOut" style="font-family:ui-monospace,Menlo,Consolas,monospace;"></div>
-        </div>
-        <div class="box">
-          <div style="opacity:.7;margin-bottom:6px">2) Job 상태</div>
-          <div id="jobOut" style="font-family:ui-monospace,Menlo,Consolas,monospace;"></div>
-        </div>
+      <div class="cols">
+        <textarea id="parseOut" readonly placeholder="1) Parse 결과"></textarea>
+        <textarea id="statusOut" readonly placeholder="2) Job 상태"></textarea>
       </div>
 
-      <div class="box log" id="log" style="margin-top:12px"></div>
-      <div class="tip">Tip: 무료 인스턴스는 첫 요청 시 웨이크업으로 수십 초 지연될 수 있습니다.</div>
+      <div id="log" class="log" style="margin-top:10px">–</div>
+      <div class="muted">Tip: 무료 인스턴스는 첫 요청 시 웜업으로 수십 초 지연될 수 있습니다.</div>
     </div>
-  </div>
 
-  <script>
-    const $ = sel => document.querySelector(sel);
-    const log = (m) => {
-      const el = $('#log');
-      el.textContent += `[${new Date().toTimeString().slice(0,8)}] ${m}\n`;
-      el.scrollTop = el.scrollHeight;
-    };
-
-    let lastParse = null; // { platform, resourceId }
-    let lastJobId = null;
-
-    $('#btnParse').onclick = async () => {
-      const url = $('#url').value.trim();
-      if (!url) return alert('URL을 입력하세요.');
-
-      try {
-        log('parse 요청 중…');
-        const r = await fetch('/api/parse', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ url })
-        });
-        if (!r.ok) throw new Error('parse 실패: ' + r.status);
-        const data = await r.json();
-        lastParse = data;
-        $('#parseOut').textContent = JSON.stringify(data, null, 2);
-        $('#btnDownload').disabled = false;
-        log('parse 완료.');
-      } catch (e) {
-        log('parse 에러: ' + e.message);
-        alert('Parse 실패: ' + e.message);
-      }
-    };
-
-    $('#btnDownload').onclick = async () => {
-      if (!lastParse) return alert('먼저 "분석"을 실행하세요.');
-      try {
-        log('download 요청 중…');
-        const r = await fetch('/api/download', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            platform: lastParse.platform,
-            resourceId: lastParse.resourceId,
-            quality: '720p',
-            type: 'video'
-          })
-        });
-        if (!r.ok) throw new Error('download 실패: ' + r.status);
-        const { jobId } = await r.json();
-        lastJobId = jobId;
-        log('download enqueued: ' + jobId);
-        poll(jobId);
-      } catch (e) {
-        log('download 에러: ' + e.message);
-        alert('Download 실패: ' + e.message);
-      }
-    };
-
-    async function poll(jobId){
-      const t = setInterval(async () => {
-        try{
-          const r = await fetch('/api/download/status?jobId=' + encodeURIComponent(jobId));
-          if (!r.ok) throw new Error('status ' + r.status);
-          const data = await r.json();
-          $('#jobOut').textContent = JSON.stringify(data, null, 2);
-          if (data.status === 'done' && data.downloadUrl) {
-            clearInterval(t);
-            log('완료! 다운로드 링크 열기…');
-            // 새 탭으로 다운로드 링크 열기
-            window.open(data.downloadUrl, '_blank');
-          }
-          if (data.status === 'error') {
-            clearInterval(t);
-            log('작업 에러: ' + data.error);
-            alert('작업 에러: ' + data.error);
-          }
-        }catch(e){
-          clearInterval(t);
-          log('status 에러: ' + e.message);
-        }
-      }, 1000);
-    }
-  </script>
-</body>
-</html>
+    <div class="card hist">
+      <div class="row" style="justify-content:space-betwe
