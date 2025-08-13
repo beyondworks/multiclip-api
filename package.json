@@ -1,6 +1,6 @@
 {
   "name": "multiclip-api",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "type": "module",
   "main": "server.js",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.572.0",
     "@aws-sdk/s3-request-presigner": "^3.572.0",
+    "@aws-sdk/lib-storage": "^3.572.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
